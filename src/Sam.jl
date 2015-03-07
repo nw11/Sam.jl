@@ -4,16 +4,16 @@ module Sam
 
 using StrPack
 using GZip
+using DataStructures
 
-import OrderedCollections.OrderedDict
 import Base.push!, Base.readline, Base.close, Base.eof
 
-export SamFile, 
-       BamFile, 
-       Alignment, 
-       BamAlignment, 
-       SamAlignment, 
-       readline, 
+export SamFile,
+       BamFile,
+       Alignment,
+       BamAlignment,
+       SamAlignment,
+       readline,
        close,
        eof
 
@@ -125,11 +125,11 @@ end
 
 function read_sam_header(io::GZipStream)
     # Check magic string
-    ## currently checked before calling 
+    ## currently checked before calling
     #read(io, Array(Uint8,4)) == SAM_MAGIC.data || error("Not a sam file.")
-    
+
     headerlines = [SAM_MAGIC * rstrip(readline(io))]
-    
+
     c = GZip.gzgetc(io)
     while c == '@'
         GZip.gzungetc(c,io)
@@ -186,8 +186,8 @@ SamAlignment(qname::String,
              seq::String,
              qual::String,
              aux::String) =
-    SamAlignment(       qname, 
-                 uint16(flag), 
+    SamAlignment(       qname,
+                 uint16(flag),
                         rname,
                  int32 (pos),
                  uint8 (mapq),
@@ -241,11 +241,11 @@ end
 
 function read_bam_header(io::IO)
     # Check magic string
-    ## currently checked before calling 
+    ## currently checked before calling
     #read(io, Array(Uint8,4)) == BAM_magic || error("Not a bam file.")
-    
+
     # Read header
-    header = read_raw_bam_header(io) | bytestring | rstrip | x->split(x,"\n") | parse_headerlines        
+    header = read_raw_bam_header(io) | bytestring | rstrip | x->split(x,"\n") | parse_headerlines
 end
 
 function write_bam_header(io::IO, header::SamHeaderData)
@@ -282,7 +282,7 @@ type BamAlignment <: Alignment
     aux::Vector{Uint8}
 end
 
-convert(::Type{SamAlignment}, ba::BamAlignment, meta::SamMeta) = 
+convert(::Type{SamAlignment}, ba::BamAlignment, meta::SamMeta) =
     SamAlignment(ba.readname,
                  ba.info.flag,
                  ba.info.refID < 0 ? "*" : meta.refs[ba.info.refID+1].rname,
@@ -329,10 +329,10 @@ function read_alignment(b::BamFile)
     cigar = read(b.io, Array(Uint32, info.n_cigar_op))
     seq = read(b.io, Array(Uint8, (info.rlen+1)>>1))
     qual = read(b.io, Array(Uint8, info.rlen))
-               
-    bytesread = ainfo_size + 
-                info.l_readname + 
-                info.n_cigar_op<<2 + 
+
+    bytesread = ainfo_size +
+                info.l_readname +
+                info.n_cigar_op<<2 +
                 (info.rlen+1)>>1 +
                 info.rlen
     # TODO: parse
@@ -342,11 +342,11 @@ function read_alignment(b::BamFile)
 end
 
 function write_alignment(b::BamFile, r::BamAlignment)
-    blocksize::Int32 = sizeof(AlignmentInfo) + 
+    blocksize::Int32 = sizeof(AlignmentInfo) +
                        length(readname) + 1 +
-                       sizeof(cigar) + 
-                       sizeof(seq) + 
-                       sizeof(qual) + 
+                       sizeof(cigar) +
+                       sizeof(seq) +
+                       sizeof(qual) +
                        sizeof(aux)
     write(b.io, blocksize)
     pack(b.io, r.info, strpack_asize, align_packed, :LittleEndian)
@@ -375,9 +375,9 @@ function read_meta(io::IO)
         elseif any(header_refs .!= refs)
             pos = find(header_refs .!= refs)
             error("""Reference sequence mismatch between header and ref list at position(s) $pos:
-                  header: 
+                  header:
                      $([pos header_refs[pos]])
-                  ref list: 
+                  ref list:
                      $([pos refs[pos]])
                   """ )
         end
@@ -441,4 +441,4 @@ close(sf::AbstractSamFile) = close(sf.io)
 eof(sf::AbstractSamFile) = eof(sf.io)
 
 end # module Sam
-    
+
